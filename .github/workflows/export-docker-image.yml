@@ -1,0 +1,40 @@
+name: Export EtherCalc Offline Docker Image
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull official EtherCalc image for Linux AMD64
+        run: |
+          docker pull --platform linux/amd64 audreyt/ethercalc:0.20260717.0
+
+      - name: Show downloaded image information
+        run: |
+          docker image inspect audreyt/ethercalc:0.20260717.0
+          docker images
+
+      - name: Export Docker image to tar file
+        run: |
+          docker save \
+            -o ethercalc-0.20260717.0-linux-amd64.tar \
+            audreyt/ethercalc:0.20260717.0
+
+          sha256sum ethercalc-0.20260717.0-linux-amd64.tar \
+            > ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
+
+          ls -lh ethercalc-0.20260717.0-linux-amd64.tar
+          cat ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
+
+      - name: Upload offline Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ethercalc-0.20260717.0-linux-amd64
+          path: |
+            ethercalc-0.20260717.0-linux-amd64.tar
+            ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
+          compression-level: 0
+          retention-days: 7
