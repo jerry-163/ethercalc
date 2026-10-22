@@ -1,40 +1,60 @@
-name: Export EtherCalc Offline Docker Image
+name: Build and Release EtherCalc Offline Docker Image
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  export-image:
+  build-release:
     runs-on: ubuntu-latest
 
+    env:
+      ETHERCALC_VERSION: "0.20260717.0"
+      IMAGE_NAME: "audreyt/ethercalc"
+      PLATFORM: "linux/amd64"
+
     steps:
-      - name: Pull official EtherCalc image for Linux AMD64
+      - name: Pull official EtherCalc image
         run: |
-          docker pull --platform linux/amd64 audreyt/ethercalc:0.20260717.0
+          docker pull --platform "${PLATFORM}" "${IMAGE_NAME}:${ETHERCALC_VERSION}"
 
-      - name: Show downloaded image information
-        run: |
-          docker image inspect audreyt/ethercalc:0.20260717.0
-          docker images
-
-      - name: Export Docker image to tar file
+      - name: Export Docker image
         run: |
           docker save \
-            -o ethercalc-0.20260717.0-linux-amd64.tar \
-            audreyt/ethercalc:0.20260717.0
+            -o "ethercalc-${ETHERCALC_VERSION}-linux-amd64.tar" \
+            "${IMAGE_NAME}:${ETHERCALC_VERSION}"
 
-          sha256sum ethercalc-0.20260717.0-linux-amd64.tar \
-            > ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
+          sha256sum "ethercalc-${ETHERCALC_VERSION}-linux-amd64.tar" \
+            > "ethercalc-${ETHERCALC_VERSION}-linux-amd64.tar.sha256.txt"
 
-          ls -lh ethercalc-0.20260717.0-linux-amd64.tar
-          cat ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
+          ls -lh
+          cat "ethercalc-${ETHERCALC_VERSION}-linux-amd64.tar.sha256.txt"
 
-      - name: Upload offline Docker image artifact
-        uses: actions/upload-artifact@v4
+      - name: Create GitHub Release and upload files
+        uses: softprops/action-gh-release@v2
         with:
-          name: ethercalc-0.20260717.0-linux-amd64
-          path: |
-            ethercalc-0.20260717.0-linux-amd64.tar
-            ethercalc-0.20260717.0-linux-amd64.tar.sha256.txt
-          compression-level: 0
-          retention-days: 7
+          tag_name: ethercalc-offline-${{ env.ETHERCALC_VERSION }}
+          name: EtherCalc Offline Docker Image ${{ env.ETHERCALC_VERSION }}
+          body: |
+            EtherCalc Docker 离线镜像。
+
+            适用系统：
+            - Ubuntu 24.04
+            - Linux x86_64 / amd64
+            - Docker Engine
+
+            导入镜像：
+            ```bash
+            docker load -i ethercalc-${{ env.ETHERCALC_VERSION }}-linux-amd64.tar
+            ```
+
+            验证文件完整性：
+            ```bash
+            sha256sum -c ethercalc-${{ env.ETHERCALC_VERSION }}-linux-amd64.tar.sha256.txt
+            ```
+          files: |
+            ethercalc-${{ env.ETHERCALC_VERSION }}-linux-amd64.tar
+            ethercalc-${{ env.ETHERCALC_VERSION }}-linux-amd64.tar.sha256.txt
+          fail_on_unmatched_files: true
